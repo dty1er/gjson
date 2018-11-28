@@ -17,6 +17,13 @@ func TestDecode(t *testing.T) {
 		{in: `{}  `},
 		{in: `  {  }  `},
 		{in: `{}  1`, invalid: true},
+		{in: `{"key": "value"}`},
+		{in: `  {"key": "value"}`},
+		{in: `  {  "key"  :    "value"   }    `},
+		{in: `{key": "value"}`, invalid: true},
+		{in: `{"key: "value"}`, invalid: true},
+		{in: `{"key": value"}`, invalid: true},
+		{in: `{"key": "value}`, invalid: true},
 	} {
 		expected := make(map[string]interface{})
 		err1 := json.Unmarshal([]byte(testcase.in), &expected)
@@ -36,7 +43,7 @@ func TestDecode(t *testing.T) {
 			t.Errorf("err2 is not nil: %v", err2)
 		}
 		if !reflect.DeepEqual(out, expected) {
-			t.Errorf("#%d: %v, want %v", i, out, expected)
+			t.Errorf("#%d: got %v, want %v", i, out, expected)
 		}
 	}
 }
