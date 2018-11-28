@@ -24,6 +24,7 @@ func TestDecode(t *testing.T) {
 		{in: `{"key: "value"}`, invalid: true},
 		{in: `{"key": value"}`, invalid: true},
 		{in: `{"key": "value}`, invalid: true},
+		{in: `{"key"; "value"}`, invalid: true},
 	} {
 		expected := make(map[string]interface{})
 		err1 := json.Unmarshal([]byte(testcase.in), &expected)
