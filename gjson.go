@@ -35,18 +35,74 @@ func (d *Decoder) skipSpaces() byte {
 	}
 }
 
-func (d *Decoder) decodeObject() (map[string]interface{}, error) {
+func (d *Decoder) readString() (string, error) {
+	d.pos++
+	start := d.pos
+
+	for {
+		if d.pos >= d.end {
+			return "", fmt.Errorf("unexpected EOF")
+		}
+
+		c := d.data[d.pos]
+		if c == '"' {
+			s := string(d.data[start:d.pos])
+			d.pos++
+			return s, nil
+		}
+		d.pos++
+	}
+}
+
+func (d *Decoder) decodeObject() (obj map[string]interface{}, err error) {
 	d.pos++
 
 	var c byte
-	obj := make(map[string]interface{})
+	var key string
+	var val string
+	obj = make(map[string]interface{})
 
-	// look ahead for } - if the object has no keys.
+	// object ends
 	if c = d.skipSpaces(); c == '}' {
 		d.pos++
 		return obj, nil
 	}
-	return nil, fmt.Errorf("\"}\" expected, but got %v", c)
+
+	for {
+		if c = d.skipSpaces(); c != '"' {
+			err = fmt.Errorf("key must be string")
+			break
+		}
+
+		if key, err = d.readString(); err != nil {
+			err = fmt.Errorf("key is invalid")
+			break
+		}
+
+		if c = d.skipSpaces(); c != ':' {
+			err = fmt.Errorf("after object key")
+			break
+		}
+		d.pos++
+
+		if c = d.skipSpaces(); c != '"' {
+			err = fmt.Errorf("value must be string")
+			break
+		}
+
+		if val, err = d.readString(); err != nil {
+			err = fmt.Errorf("value is invalid")
+			break
+		}
+
+		obj[key] = val
+
+		if c = d.skipSpaces(); c == '}' {
+			d.pos++
+			break
+		}
+	}
+	return
 }
 
 // Decode ...
