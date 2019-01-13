@@ -17,6 +17,7 @@ func TestDecode(t *testing.T) {
 		{in: `{}  `},
 		{in: `  {  }  `},
 		{in: `{}  1`, invalid: true},
+		// string
 		{in: `{"key": "value"}`},
 		{in: `  {"key": "value"}`},
 		{in: `  {  "key"  :    "value"   }    `},
@@ -25,6 +26,13 @@ func TestDecode(t *testing.T) {
 		{in: `{"key": value"}`, invalid: true},
 		{in: `{"key": "value}`, invalid: true},
 		{in: `{"key"; "value"}`, invalid: true},
+		// number
+		{in: `{"key": 1}`},
+		{in: `{"key": 1.234}`},
+		{in: `{"key": -23.45}`},
+		{in: `{"key": --1}`, invalid: true},
+		{in: `{"key": +0}`, invalid: true},
+		{in: `{5: 0}`, invalid: true},
 	} {
 		expected := make(map[string]interface{})
 		err1 := json.Unmarshal([]byte(testcase.in), &expected)
