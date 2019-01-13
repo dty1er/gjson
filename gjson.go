@@ -2,6 +2,7 @@ package gjson
 
 import (
 	"fmt"
+	"strconv"
 )
 
 // Decoder ...
@@ -54,12 +55,68 @@ func (d *Decoder) readString() (string, error) {
 	}
 }
 
+func (d *Decoder) readNumber() (n float64, err error) {
+	start := d.pos
+	c := d.data[d.pos]
+	if c == '0' {
+		c = d.readNext()
+	} else {
+		// When comes here, c must be in 1 to 9
+		for ; '0' <= c && c <= '9'; c = d.readNext() {
+			// When number is 12345,
+			// 1 -> 10 + 2 => 120 + 3 => 1230 + 4 -> 12340 + 5 => 12345
+			n = n*10 + float64(c-'0') // c-'0': cast
+		}
+	}
+
+	if c == '.' {
+		d.pos++
+		if c = d.data[d.pos]; c < '0' && c > '9' {
+			return 0, fmt.Errorf("number is required after decimal point")
+		}
+		for c = d.readNext(); '0' <= c && c <= '9'; {
+			c = d.readNext()
+		}
+	}
+
+	tmpn := string(d.data[start:d.pos])
+	if n, err = strconv.ParseFloat(tmpn, 64); err != nil {
+		return 0, err
+	}
+	return
+}
+
+func (d *Decoder) readAny() (interface{}, error) {
+	switch c := d.skipSpaces(); c {
+	case '"':
+		return d.readString()
+	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return d.readNumber()
+	case '-':
+		d.pos++
+		c := d.data[d.pos]
+		if c < '0' && '9' < c {
+			return nil, fmt.Errorf("invalid in negatice number")
+		}
+		n, err := d.readNumber()
+		return -n, err
+	default:
+		return nil, fmt.Errorf("value was invalid")
+	}
+	// case true, false, object, array
+}
+
+func (d *Decoder) readNext() byte {
+	d.pos++
+	return d.data[d.pos]
+}
+
 func (d *Decoder) decodeObject() (obj map[string]interface{}, err error) {
 	d.pos++
 
 	var c byte
+	var val interface{}
 	var key string
-	var val string
 	obj = make(map[string]interface{})
 
 	// object ends
@@ -85,13 +142,7 @@ func (d *Decoder) decodeObject() (obj map[string]interface{}, err error) {
 		}
 		d.pos++
 
-		if c = d.skipSpaces(); c != '"' {
-			err = fmt.Errorf("value must be string")
-			break
-		}
-
-		if val, err = d.readString(); err != nil {
-			err = fmt.Errorf("value is invalid")
+		if val, err = d.readAny(); err != nil {
 			break
 		}
 
