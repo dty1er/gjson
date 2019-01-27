@@ -5,23 +5,13 @@ import (
 	"strconv"
 )
 
-// Decoder ...
-type Decoder struct {
+type decoder struct {
 	pos  int
 	end  int
 	data []byte
 }
 
-// NewDecoder ...
-func NewDecoder(data []byte) *Decoder {
-	return &Decoder{
-		pos:  0,
-		end:  len(data),
-		data: data,
-	}
-}
-
-func (d *Decoder) skipSpaces() byte {
+func (d *decoder) skipSpaces() byte {
 	for {
 		if d.pos == d.end {
 			return 0
@@ -36,7 +26,7 @@ func (d *Decoder) skipSpaces() byte {
 	}
 }
 
-func (d *Decoder) readString() (string, error) {
+func (d *decoder) readString() (string, error) {
 	d.pos++
 	start := d.pos
 
@@ -55,7 +45,7 @@ func (d *Decoder) readString() (string, error) {
 	}
 }
 
-func (d *Decoder) readNumber() (n float64, err error) {
+func (d *decoder) readNumber() (n float64, err error) {
 	start := d.pos
 	c := d.data[d.pos]
 	if c == '0' {
@@ -84,7 +74,7 @@ func (d *Decoder) readNumber() (n float64, err error) {
 	return
 }
 
-func (d *Decoder) readArray() (interface{}, error) {
+func (d *decoder) readArray() (interface{}, error) {
 	d.pos++
 	arr := make([]interface{}, 0)
 	if c := d.skipSpaces(); c == ']' {
@@ -111,7 +101,7 @@ func (d *Decoder) readArray() (interface{}, error) {
 	}
 }
 
-func (d *Decoder) readAny() (interface{}, error) {
+func (d *decoder) readAny() (interface{}, error) {
 	switch c := d.skipSpaces(); c {
 	case '"':
 		return d.readString()
@@ -169,12 +159,12 @@ func (d *Decoder) readAny() (interface{}, error) {
 	}
 }
 
-func (d *Decoder) readNext() byte {
+func (d *decoder) readNext() byte {
 	d.pos++
 	return d.data[d.pos]
 }
 
-func (d *Decoder) readObject() (obj map[string]interface{}, err error) {
+func (d *decoder) readObject() (obj map[string]interface{}, err error) {
 	d.pos++
 
 	var c byte
@@ -224,14 +214,18 @@ func (d *Decoder) readObject() (obj map[string]interface{}, err error) {
 	return
 }
 
-func (d *Decoder) error(msg string) error {
+func (d *decoder) error(msg string) error {
 	return fmt.Errorf("invalid json: %s at %d", msg, d.pos+1)
 }
 
 // Decode returns parsed json object.
 // arg must be started "{" and valid as JSON.
 func Decode(data []byte) (val map[string]interface{}, err error) {
-	d := NewDecoder(data)
+	d := &decoder{
+		pos:  0,
+		end:  len(data),
+		data: data,
+	}
 
 	if c := d.skipSpaces(); c != '{' {
 		return nil, d.error(fmt.Sprintf(`"{" expected, but got %v`, c))
