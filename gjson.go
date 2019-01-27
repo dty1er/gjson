@@ -80,9 +80,7 @@ func (d *Decoder) readNumber() (n float64, err error) {
 	}
 
 	tmpn := string(d.data[start:d.pos])
-	if n, err = strconv.ParseFloat(tmpn, 64); err != nil {
-		return 0, err
-	}
+	n, _ = strconv.ParseFloat(tmpn, 64)
 	return
 }
 
