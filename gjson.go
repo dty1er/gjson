@@ -71,7 +71,7 @@ func (d *Decoder) readNumber() (n float64, err error) {
 
 	if c == '.' {
 		d.pos++
-		if c = d.data[d.pos]; c < '0' && c > '9' {
+		if c = d.data[d.pos]; c < '0' || '9' < c {
 			return 0, fmt.Errorf("number is required after decimal point")
 		}
 		for c = d.readNext(); '0' <= c && c <= '9'; {
@@ -96,7 +96,7 @@ func (d *Decoder) readAny() (interface{}, error) {
 	case '-':
 		d.pos++
 		c := d.data[d.pos]
-		if c < '0' && '9' < c {
+		if c < '0' || '9' < c {
 			return nil, fmt.Errorf("invalid in negatice number")
 		}
 		n, err := d.readNumber()
