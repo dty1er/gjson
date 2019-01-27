@@ -42,7 +42,7 @@ func (d *Decoder) readString() (string, error) {
 
 	for {
 		if d.pos >= d.end {
-			return "", fmt.Errorf("unexpected EOF")
+			return "", d.error("unexpected EOF")
 		}
 
 		c := d.data[d.pos]
@@ -72,7 +72,7 @@ func (d *Decoder) readNumber() (n float64, err error) {
 	if c == '.' {
 		d.pos++
 		if c = d.data[d.pos]; c < '0' || '9' < c {
-			return 0, fmt.Errorf("number is required after decimal point")
+			return 0, d.error("number is required after decimal point")
 		}
 		for c = d.readNext(); '0' <= c && c <= '9'; {
 			c = d.readNext()
@@ -97,7 +97,7 @@ func (d *Decoder) readArray() (interface{}, error) {
 	for {
 		v, err := d.readAny()
 		if err != nil {
-			return arr, fmt.Errorf("reading value failed: %s", err)
+			return arr, d.error(fmt.Sprintf("reading value failed: %s", err))
 		}
 		arr = append(arr, v)
 
@@ -108,7 +108,7 @@ func (d *Decoder) readArray() (interface{}, error) {
 			d.pos++
 			return arr, nil
 		} else {
-			return arr, fmt.Errorf(`"," or "]" is expected`)
+			return arr, d.error(`"," or "]" is expected`)
 		}
 	}
 }
@@ -124,7 +124,7 @@ func (d *Decoder) readAny() (interface{}, error) {
 		d.pos++
 		c := d.data[d.pos]
 		if c < '0' || '9' < c {
-			return nil, fmt.Errorf("invalid in negatice number")
+			return nil, d.error("invalid in negatice number")
 		}
 		n, err := d.readNumber()
 		return -n, err
@@ -132,27 +132,29 @@ func (d *Decoder) readAny() (interface{}, error) {
 	case 't':
 		d.pos++
 		if d.end-d.pos < 3 { // avoid index out of bounds
-			return nil, fmt.Errorf("Unexpected EOF")
+			return nil, d.error("Unexpected EOF")
 		}
 		if d.data[d.pos] == 'r' && d.data[d.pos+1] == 'u' && d.data[d.pos+2] == 'e' {
 			d.pos += 3
 			return true, nil
 		}
-		return nil, fmt.Errorf(`"true" is expected but got "%s" next to "t"`, string(d.data[d.pos]))
+		return nil, d.error(fmt.Sprintf(`"true" is expected but got "%s" next to "t"`, string(d.data[d.pos])))
 	case 'f':
 		d.pos++
 		if d.end-d.pos < 4 { // avoid index out of bounds
-			return nil, fmt.Errorf("Unexpected EOF")
+			return nil, d.error("Unexpected EOF")
 		}
 		if d.data[d.pos] == 'a' && d.data[d.pos+1] == 'l' && d.data[d.pos+2] == 's' && d.data[d.pos+3] == 'e' {
 			d.pos += 4
 			return false, nil
 		}
-		return nil, fmt.Errorf(`"false" is expected but got "%s" next to "f"`, string(d.data[d.pos]))
+		return nil, d.error(fmt.Sprintf(`"false" is expected but got "%s" next to "f"`, string(d.data[d.pos])))
 	case '[':
 		return d.readArray()
+	case '{':
+		return d.readObject()
 	default:
-		return nil, fmt.Errorf("value is invalid")
+		return nil, d.error("value is invalid")
 	}
 }
 
@@ -161,7 +163,7 @@ func (d *Decoder) readNext() byte {
 	return d.data[d.pos]
 }
 
-func (d *Decoder) decodeObject() (obj map[string]interface{}, err error) {
+func (d *Decoder) readObject() (obj map[string]interface{}, err error) {
 	d.pos++
 
 	var c byte
@@ -177,17 +179,17 @@ func (d *Decoder) decodeObject() (obj map[string]interface{}, err error) {
 
 	for {
 		if c = d.skipSpaces(); c != '"' {
-			err = fmt.Errorf("key must be string")
+			err = d.error(fmt.Sprintf("key must be string: %s", string(c)))
 			break
 		}
 
 		if key, err = d.readString(); err != nil {
-			err = fmt.Errorf("key is invalid")
+			err = d.error("key is invalid")
 			break
 		}
 
 		if c = d.skipSpaces(); c != ':' {
-			err = fmt.Errorf("after object key")
+			err = d.error("after object key")
 			break
 		}
 		d.pos++
@@ -201,30 +203,34 @@ func (d *Decoder) decodeObject() (obj map[string]interface{}, err error) {
 		if c = d.skipSpaces(); c == '}' {
 			d.pos++
 			break
+		} else if c == ',' {
+			d.pos++
+		} else {
+			err = d.error("invalid object")
+			break
 		}
 	}
 	return
 }
 
-// Decode ...
-func Decode(data []byte) (val map[string]interface{}, err error) {
-	d := NewDecoder(data)
-	debug("d.end: %v", d.end)
-
-	if c := d.skipSpaces(); c != '{' {
-		return nil, fmt.Errorf("\"{\" expected, but got %v", c)
-	}
-	val, err = d.decodeObject()
-	if err != nil {
-		return nil, fmt.Errorf("invalid")
-	}
-	if c := d.skipSpaces(); d.pos < d.end {
-		return nil, fmt.Errorf("invalid json: %v", c)
-	}
-	return val, nil
+func (d *Decoder) error(msg string) error {
+	return fmt.Errorf("invalid json: %s at %d", msg, d.pos+1)
 }
 
-func debug(msg string, args ...interface{}) {
-	s := fmt.Sprintf(msg, args...)
-	fmt.Println(fmt.Sprintf("[DEBUG] %v", s))
+// Decode returns parsed json object.
+// arg must be started "{" and valid as JSON.
+func Decode(data []byte) (val map[string]interface{}, err error) {
+	d := NewDecoder(data)
+
+	if c := d.skipSpaces(); c != '{' {
+		return nil, d.error(fmt.Sprintf(`"{" expected, but got %v`, c))
+	}
+	val, err = d.readObject()
+	if err != nil {
+		return nil, d.error(fmt.Sprintf("invalid: %s", err))
+	}
+	if c := d.skipSpaces(); d.pos < d.end {
+		return nil, d.error(fmt.Sprintf("invalid json: %v", c))
+	}
+	return val, nil
 }
