@@ -63,8 +63,8 @@ func (d *Decoder) readNumber() (n float64, err error) {
 	} else {
 		// When comes here, c must be in 1 to 9
 		for ; '0' <= c && c <= '9'; c = d.readNext() {
-			// When number is 12345,
-			// 1 -> 10 + 2 => 120 + 3 => 1230 + 4 -> 12340 + 5 => 12345
+			// e.g. when number is 12345,
+			// 1 -> 10 + 2 -> 120 + 3 -> 1230 + 4 -> 12340 + 5 => 12345
 			n = n*10 + float64(c-'0') // c-'0': cast
 		}
 	}
@@ -90,6 +90,7 @@ func (d *Decoder) readAny() (interface{}, error) {
 	switch c := d.skipSpaces(); c {
 	case '"':
 		return d.readString()
+
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return d.readNumber()
 	case '-':

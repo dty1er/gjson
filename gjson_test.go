@@ -30,6 +30,7 @@ func TestDecode(t *testing.T) {
 		{in: `{"key": 1}`},
 		{in: `{"key": 1.234}`},
 		{in: `{"key": -23.45}`},
+		{in: `{"key": 1a}`, invalid: true},
 		{in: `{"key": --1}`, invalid: true},
 		{in: `{"key": +0}`, invalid: true},
 		{in: `{5: 0}`, invalid: true},
