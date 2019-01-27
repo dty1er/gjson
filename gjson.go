@@ -101,6 +101,27 @@ func (d *Decoder) readAny() (interface{}, error) {
 		}
 		n, err := d.readNumber()
 		return -n, err
+
+	case 't':
+		d.pos++
+		if d.end-d.pos < 3 { // avoid index out of bounds
+			return nil, fmt.Errorf("Unexpected EOF")
+		}
+		if d.data[d.pos] == 'r' && d.data[d.pos+1] == 'u' && d.data[d.pos+2] == 'e' {
+			d.pos += 3
+			return true, nil
+		}
+		return nil, fmt.Errorf(`"true" is expected but got "%s" next to "t"`, string(d.data[d.pos]))
+	case 'f':
+		d.pos++
+		if d.end-d.pos < 4 { // avoid index out of bounds
+			return nil, fmt.Errorf("Unexpected EOF")
+		}
+		if d.data[d.pos] == 'a' && d.data[d.pos+1] == 'l' && d.data[d.pos+2] == 's' && d.data[d.pos+3] == 'e' {
+			d.pos += 4
+			return false, nil
+		}
+		return nil, fmt.Errorf(`"false" is expected but got "%s" next to "f"`, string(d.data[d.pos]))
 	default:
 		return nil, fmt.Errorf("value was invalid")
 	}
