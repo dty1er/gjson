@@ -86,6 +86,33 @@ func (d *Decoder) readNumber() (n float64, err error) {
 	return
 }
 
+func (d *Decoder) readArray() (interface{}, error) {
+	d.pos++
+	arr := make([]interface{}, 0)
+	if c := d.skipSpaces(); c == ']' {
+		d.pos++
+		return arr, nil
+	}
+
+	for {
+		v, err := d.readAny()
+		if err != nil {
+			return arr, fmt.Errorf("reading value failed: %s", err)
+		}
+		arr = append(arr, v)
+
+		if c := d.skipSpaces(); c == ',' {
+			d.pos++
+			continue
+		} else if c == ']' {
+			d.pos++
+			return arr, nil
+		} else {
+			return arr, fmt.Errorf(`"," or "]" is expected`)
+		}
+	}
+}
+
 func (d *Decoder) readAny() (interface{}, error) {
 	switch c := d.skipSpaces(); c {
 	case '"':
@@ -122,10 +149,11 @@ func (d *Decoder) readAny() (interface{}, error) {
 			return false, nil
 		}
 		return nil, fmt.Errorf(`"false" is expected but got "%s" next to "f"`, string(d.data[d.pos]))
+	case '[':
+		return d.readArray()
 	default:
-		return nil, fmt.Errorf("value was invalid")
+		return nil, fmt.Errorf("value is invalid")
 	}
-	// case true, false, object, array
 }
 
 func (d *Decoder) readNext() byte {
