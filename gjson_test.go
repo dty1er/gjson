@@ -50,6 +50,12 @@ func TestDecode(t *testing.T) {
 		{in: `{"key": t}`, invalid: true},
 		{in: `{"key": fals}`, invalid: true},
 		{in: `{"key": f}`, invalid: true},
+		// null
+		{in: `{"key": null}`},
+		{in: `{"key": [false, "a", null]}`},
+		{in: `{"key": nulx}`, invalid: true},
+		{in: `{"key": nul}`, invalid: true},
+		{in: `{"key": n}`, invalid: true},
 		// array
 		{in: `{"key": []}`},
 		{in: `{"key": ["a"]}`},

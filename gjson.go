@@ -149,8 +149,21 @@ func (d *Decoder) readAny() (interface{}, error) {
 			return false, nil
 		}
 		return nil, d.error(fmt.Sprintf(`"false" is expected but got "%s" next to "f"`, string(d.data[d.pos])))
+
+	case 'n':
+		d.pos++
+		if d.end-d.pos < 3 { // avoid index out of bounds
+			return nil, d.error("Unexpected EOF")
+		}
+		if d.data[d.pos] == 'u' && d.data[d.pos+1] == 'l' && d.data[d.pos+2] == 'l' {
+			d.pos += 3
+			return nil, nil
+		}
+		return nil, d.error(fmt.Sprintf(`"null" is expected but got "%s" next to "n"`, string(d.data[d.pos])))
+
 	case '[':
 		return d.readArray()
+
 	case '{':
 		return d.readObject()
 	default:
