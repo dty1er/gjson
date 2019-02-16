@@ -17,7 +17,7 @@ func (d *decoder) skipSpaces() byte {
 			return 0
 		}
 		switch c := d.data[d.pos]; c {
-		case ' ':
+		case ' ', '\t', '\n', '\r':
 			d.pos++
 			continue
 		default:

@@ -76,12 +76,74 @@ func TestDecode(t *testing.T) {
 		{in: `{"key": [{"b": "c", "d": 4}]}`},
 		{in: `{"key": {"key": [["a"], {"b": "c", "d": 4}]}}`},
 		{in: `{"key": "a", "key2": [{"a": {"b": {"c": false}}}]}`},
-		{in: `{"key": "a", "key2": [{"a": {"b": {"c": false}}}]}`},
 		{in: `{"key": {}`, invalid: true},
 		{in: `{"key": {"key", "key2"}}`, invalid: true},
 		{in: `{"key": {"key": {}}`, invalid: true},
 		{in: `{"key": {"key": {}}`, invalid: true},
 		{in: `{"key": {"key: "test"}}`, invalid: true},
+		// with new line
+		{in: `{
+			"key": {}
+		}`},
+		{in: `
+		{
+			"key": {
+				"a": "b"
+  		}
+  	}`},
+		{in: `{
+			"key": {
+				"key": [
+				  1, 
+				  2, 
+					"A", 
+					true, 
+					[
+					  false
+					]
+				]
+			}
+		}`},
+		{in: `{
+			"key": [
+			  {
+			  	"key2": "b"
+			  }
+			]
+		}`},
+		{in: `{
+			"key": [
+		  	{
+					"b": "c", 
+					"d": 4
+				}
+			]
+		}`},
+		{in: `{
+			"key": {
+				"key": [
+				  [
+					  "a"
+					], 
+					{
+						"b": "c", 
+						"d": 4
+					}
+				]
+			}
+		}`},
+		{in: `{
+			"key": "a", 
+			"key2": [
+			  {
+					"a": {
+						"b": {
+							"c": false
+						}
+					}
+				}
+			]
+		}`},
 	} {
 		expected := make(map[string]interface{})
 		err1 := json.Unmarshal([]byte(testcase.in), &expected)
